@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>ToDo · Панель задач</title>
+
+    <!-- CSRF для Spring Security (если включён) -->
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <!-- Шрифты (системные для скорости) -->
+    <style>
+        :root{
+          --bg:#0f1222;
+          --card:#171a2b;
+          --muted:#8b90a8;
+          --text:#f4f6ff;
+          --accent: #6a7cff;
+          --accent-2:#8a5cff;
+          --ok:#2ecc71;
+          --warn:#f39c12;
+          --danger:#ff5c7c;
+          --glass: rgba(255,255,255,.06);
+          --glass-2: rgba(255,255,255,.08);
+          --radius:14px;
+          --radius-sm:10px;
+          --shadow: 0 10px 30px rgba(0,0,0,.35);
+          --shadow-soft: 0 8px 20px rgba(0,0,0,.25);
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{
+          margin:0;
+          font: 500 16px/1.5 ui-sans-serif, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+          color:var(--text);
+          background:
+            radial-gradient(1200px 800px at 10% -10%, rgba(138,92,255,.25),transparent 60%),
+            radial-gradient(1200px 800px at 110% 10%, rgba(106,124,255,.22),transparent 60%),
+            linear-gradient(180deg, #0d0f1d, #0f1222 35%, #0b0e1a 100%);
+          overflow-x:hidden;
+        }
+
+        /* Header */
+        .wrap{max-width:1100px;margin:0 auto;padding:24px}
+        .nav{
+          display:flex;align-items:center;justify-content:space-between;
+          padding:14px 18px;border-radius:var(--radius);
+          background:linear-gradient(180deg, var(--glass), var(--glass-2));
+          backdrop-filter: blur(14px);
+          box-shadow: var(--shadow-soft);
+          position: sticky; top: 16px; z-index: 50;
+        }
+        .brand{display:flex;align-items:center;gap:12px}
+        .logo{
+          width:40px;height:40px;border-radius:12px;
+          background: conic-gradient(from 220deg, var(--accent), var(--accent-2), var(--accent));
+          box-shadow: 0 6px 18px rgba(138,92,255,.45), inset 0 0 14px rgba(255,255,255,.08);
+        }
+        .brand h1{font-size:18px;margin:0;letter-spacing:.3px}
+        .nav-actions{display:flex;gap:10px}
+        .btn{
+          appearance:none;border:0;cursor:pointer;
+          padding:10px 14px;border-radius:12px;
+          background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+          color:var(--text);
+          transition:.2s transform ease,.3s background ease,.3s box-shadow ease;
+        }
+        .btn:active{transform: translateY(1px)}
+        .btn.primary{
+          background: linear-gradient(180deg, var(--accent), var(--accent-2));
+          box-shadow: 0 10px 24px rgba(106,124,255,.35);
+        }
+        .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.12)}
+        .btn.icon{display:flex;align-items:center;gap:8px}
+
+        /* Hero / метрики */
+        .hero{
+          margin-top:24px;
+          display:grid;grid-template-columns: 1.35fr .65fr; gap:18px;
+        }
+        .card{
+          background: linear-gradient(180deg, var(--glass), var(--glass-2));
+          border:1px solid rgba(255,255,255,.08);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow);
+        }
+        .card-inner{padding:20px}
+        .title{
+          display:flex;align-items:center;justify-content:space-between;margin-bottom:14px
+        }
+        .title h2{margin:0;font-size:20px}
+        .muted{color:var(--muted);font-weight:500}
+
+        /* Поиск и фильтры */
+        .filters{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+        .field{
+          display:flex;align-items:center;gap:10px;
+          background: rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+          padding:10px 12px;border-radius:12px;min-height:44px;
+        }
+        .field input,.field select{
+          background:transparent;border:0;outline:0;color:var(--text);font-size:14px;min-width:0;
+        }
+        .field input::placeholder{color:#9aa0b7}
+
+        /* Таблица */
+        .table{width:100%;border-collapse:separate;border-spacing:0 10px}
+        .thead{display:grid;grid-template-columns: 48px 1.1fr 1.6fr 130px 160px 120px; gap:12px;margin:6px 2px 10px}
+        .thead div{color:var(--muted);font-size:12px;letter-spacing:.4px;text-transform:uppercase}
+        .row{
+          display:grid;grid-template-columns: 48px 1.1fr 1.6fr 130px 160px 120px; gap:12px;
+          align-items:center;
+          padding:10px; border-radius:12px; background:var(--card); border:1px solid rgba(255,255,255,.08);
+          transition: .2s transform ease, .25s box-shadow ease, .25s background ease;
+        }
+        .row:hover{transform: translateY(-2px); box-shadow: var(--shadow-soft)}
+        .badge{
+          font-size:12px;padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.12);
+          background: rgba(255,255,255,.05)
+        }
+        .badge.ok{border-color: rgba(46,204,113,.4); color:#aef2c8}
+        .badge.warn{border-color: rgba(243,156,18,.5); color:#ffd79a}
+        .badge.danger{border-color: rgba(255,92,124,.45); color:#ffb1c1}
+
+        .checkbox{
+          width:22px;height:22px;display:inline-grid;place-items:center;
+          background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:8px;
+          cursor:pointer; transition:.2s ease;
+        }
+        .checkbox input{appearance:none;width:0;height:0}
+        .checkbox.checked{background:linear-gradient(180deg, #2ecc71, #25b863); border-color: rgba(46,204,113,.6)}
+        .actions{display:flex;gap:8px;justify-content:flex-end}
+        .small{font-size:12px;color:var(--muted)}
+
+        /* Пустое состояние */
+        .empty{
+          text-align:center;padding:40px 10px;color:var(--muted)
+        }
+
+        /* Модалка */
+        .modal-backdrop{
+          position:fixed;inset:0;background:rgba(10,12,20,.6);backdrop-filter: blur(6px);
+          display:none;align-items:center;justify-content:center;z-index:100;
+          padding:20px;
+        }
+        .modal{width:min(560px,100%);background:var(--card);border:1px solid rgba(255,255,255,.12);
+          border-radius:18px; box-shadow: var(--shadow)}
+        .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+        .modal-body{padding:18px}
+        .grid{display:grid;gap:12px}
+        .grid.two{grid-template-columns:1fr 1fr}
+        .input{
+          display:flex;flex-direction:column;gap:8px;background:rgba(255,255,255,.05);
+          border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 12px 10px
+        }
+        .input label{font-size:12px;color:var(--muted);letter-spacing:.3px}
+        .input input,.input textarea{
+          background:transparent;border:0;outline:0;color:var(--text);font-size:14px;resize:vertical
+        }
+        .modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:0 18px 18px}
+        .hidden{display:none}
+
+        /* Анимации */
+        @keyframes pop{from{opacity:0;transform:scale(.98) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)}}
+        .row{animation: pop .25s ease both}
+        .modal{animation: pop .2s ease .02s both}
+
+        /* Адаптив */
+        @media (max-width:900px){
+          .hero{grid-template-columns: 1fr}
+          .thead, .row{grid-template-columns: 36px 1fr 1.2fr 110px 140px 110px}
+        }
+        @media (max-width:680px){
+          .thead{display:none}
+          .row{
+            grid-template-columns: 36px 1fr 90px;
+            grid-auto-rows:auto;
+          }
+          .row > .desc, .row > .due, .row > .status, .row > .actions{grid-column: 2 / -1}
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <!-- NAV -->
+    <header class="nav">
+        <div class="brand">
+            <div class="logo" aria-hidden="true"></div>
+            <h1>ToDo · Контур управления</h1>
+        </div>
+        <div class="nav-actions">
+            <button class="btn ghost icon" id="refreshBtn" title="Обновить список">
+                <span>↻</span><span>Обновить</span>
+            </button>
+            <button class="btn primary icon" id="openCreate">
+                <span>＋</span><span>Новая задача</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="card">
+            <div class="card-inner">
+                <div class="title">
+                    <h2>Задачи</h2>
+                    <div class="muted small" id="counterLabel">—</div>
+                </div>
+
+                <!-- Поиск/фильтры -->
+                <div class="filters">
+                    <div class="field" style="flex:1 1 260px">
+                        <input id="searchInput" type="search" placeholder="Поиск по названию/описанию…"/>
+                    </div>
+                    <div class="field">
+                        <select id="statusSelect" aria-label="Фильтр по статусу">
+                            <option value="all">Все</option>
+                            <option value="open">Открыты</option>
+                            <option value="done">Выполнены</option>
+                            <option value="overdue">Просрочены</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="small">До</label>
+                        <input id="dueBefore" type="date"/>
+                    </div>
+                    <button class="btn" id="clearFilters">Сбросить</button>
+                </div>
+
+                <!-- Таблица -->
+                <div class="thead">
+                    <div></div>
+                    <div>Название</div>
+                    <div>Описание</div>
+                    <div>Срок</div>
+                    <div>Статус</div>
+                    <div style="text-align:right">Действия</div>
+                </div>
+
+                <!-- Серверный рендер (если model.addAttribute("tasks", …)) -->
+                <div th:if="${tasks != null}">
+                    <div th:if="${#lists.isEmpty(tasks)}" class="empty">Пока пусто. Самое время создать первую задачу.</div>
+                    <div th:each="t : ${tasks}" class="row" th:attr="data-id=${t.id}">
+                        <div class="checkbox" th:classappend="${t.complete} ? ' checked'">
+                            <input type="checkbox" th:checked="${t.complete}" disabled/>
+                        </div>
+                        <div class="title-cell" th:text="${t.title}">Название</div>
+                        <div class="desc muted" th:text="${t.description}">Описание</div>
+                        <div class="due">
+                            <span class="small" th:text="${t.dueDate}">—</span>
+                        </div>
+                        <div class="status">
+                <span class="badge"
+                      th:classappend="${t.complete} ? ' ok' : (${t.dueDate != null and t.dueDate.isBefore(T(java.time.LocalDate).now()) and !t.complete} ? ' danger' : ' warn')"
+                      th:text="${t.complete} ? 'Выполнено' : (${t.dueDate != null and t.dueDate.isBefore(T(java.time.LocalDate).now())} ? 'Просрочено' : 'Открыто')">
+                  Статус
+                </span>
+                        </div>
+                        <div class="actions">
+                            <a class="btn ghost small" th:href="@{'/tasks/' + ${t.id}}" target="_blank">JSON</a>
+                            <button class="btn small markDoneBtn" th:attr="data-id=${t.id}" th:if="${!t.complete}">Отметить</button>
+                            <button class="btn small dangerBtn" th:attr="data-id=${t.id}">Удалить</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Клиентский рендер (если модель пустая — данные придут fetch’ем) -->
+                <div id="clientList" th:if="${tasks == null}">
+                    <div class="empty" id="emptyState">Загружаем список…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Метрики -->
+        <aside class="card">
+            <div class="card-inner">
+                <div class="title"><h2>Сводка</h2></div>
+                <div class="grid">
+                    <div class="row" style="grid-template-columns:1fr">
+                        <div class="small">Всего</div>
+                        <div id="m-total" style="font-size:22px">—</div>
+                    </div>
+                    <div class="row" style="grid-template-columns:1fr">
+                        <div class="small">Открыты</div>
+                        <div id="m-open" style="font-size:22px">—</div>
+                    </div>
+                    <div class="row" style="grid-template-columns:1fr">
+                        <div class="small">Выполнены</div>
+                        <div id="m-done" style="font-size:22px">—</div>
+                    </div>
+                    <div class="row" style="grid-template-columns:1fr">
+                        <div class="small">Просрочены</div>
+                        <div id="m-overdue" style="font-size:22px">—</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<!-- Модалка: новая задача -->
+<div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+        <div class="modal-header">
+            <strong id="createTitle">Новая задача</strong>
+            <button class="btn ghost" id="closeCreate">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="createForm" class="grid">
+                <div class="input">
+                    <label for="title">Название</label>
+                    <input id="title" name="title" required maxlength="120" placeholder="Например, оформить отчёт"/>
+                </div>
+                <div class="input">
+                    <label for="description">Описание</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Кратко: что нужно сделать?"></textarea>
+                </div>
+                <div class="grid two">
+                    <div class="input">
+                        <label for="dueDate">Срок</label>
+                        <input id="dueDate" name="dueDate" type="date"/>
+                    </div>
+                    <div class="input">
+                        <label for="isComplete">Сразу выполнить?</label>
+                        <select id="isComplete" name="isComplete">
+                            <option value="false" selected>Нет</option>
+                            <option value="true">Да</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" id="cancelCreate">Отмена</button>
+                    <button type="submit" class="btn primary">Создать</button>
+                </div>
+            </form>
+            <div id="createNotice" class="small muted hidden">Отправляем…</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===== УТИЛИТЫ =====
+    const qs = sel => document.querySelector(sel);
+    const qsa = sel => Array.from(document.querySelectorAll(sel));
+    const modal = qs('#modal');
+    const openCreate = qs('#openCreate');
+    const closeCreate = qs('#closeCreate');
+    const cancelCreate = qs('#cancelCreate');
+    const createForm = qs('#createForm');
+    const notice = qs('#createNotice');
+
+    const clientList = qs('#clientList');
+    const emptyState = qs('#emptyState');
+    const counterLabel = qs('#counterLabel');
+
+    const metrics = { total: qs('#m-total'), open: qs('#m-open'), done: qs('#m-done'), overdue: qs('#m-overdue') };
+
+    const csrfToken = (document.querySelector('meta[name="_csrf"]') || {}).content;
+    const csrfHeader = (document.querySelector('meta[name="_csrf_header"]') || {}).content;
+
+    function api(url, opts={}){
+      const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+      if(csrfToken && csrfHeader){ headers[csrfHeader] = csrfToken; }
+      return fetch(url, Object.assign({}, opts, {headers}));
+    }
+
+    function fmtDate(d){
+      if(!d) return '—';
+      try { return new Date(d).toLocaleDateString('ru-RU'); } catch { return d; }
+    }
+    function isOverdue(d, complete){
+      if(!d || complete) return false;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const due = new Date(d); due.setHours(0,0,0,0);
+      return due < today;
+    }
+
+    // ===== РАБОТА С ДАННЫМИ =====
+    // Попытка взять задачи из server-side рендера:
+    function extractServerTasks(){
+      // Если есть серверные строки — соберём их в массив для метрик.
+      const rows = qsa('.row[data-id]');
+      if(!rows.length) return null;
+      return rows.map(r=>{
+        const id = Number(r.getAttribute('data-id'));
+        const title = (r.querySelector('.title-cell')||{}).textContent?.trim();
+        const desc = (r.querySelector('.desc')||{}).textContent?.trim();
+        const dueRaw = (r.querySelector('.due .small')||{}).textContent?.trim();
+        const complete = r.querySelector('.checkbox')?.classList.contains('checked');
+        return {id,title,description:desc,dueDate: dueRaw && dueRaw !== '—' ? dueRaw : null, isComplete: !!complete};
+      });
+    }
+
+    let tasks = extractServerTasks();
+
+    async function fetchTasksIfNeeded(){
+      if(tasks && tasks.length) { computeAndPaint(); return; }
+      // Нет серверных данных — попробуем GET JSON.
+      try{
+        // Ожидается, что вы добавите эндпоинт, который отдаёт список задач JSON, например GET /tasks/list или /api/tasks
+        // Для демо попробуем /tasks (если вы вернёте JSON при header Accept: application/json)
+        const res = await api('/tasks', { headers: {'Accept':'application/json'} });
+        if(res.ok){
+          const data = await res.json();
+          tasks = normalizeTasks(data);
+          paintClientList(tasks);
+          computeAndPaint();
+        }else{
+          emptyState.textContent = 'Не удалось загрузить список. Проверьте эндпоинт JSON.';
+        }
+      }catch(e){
+        emptyState.textContent = 'Ошибка сети при загрузке списка.';
+      }
+    }
+
+    function normalizeTasks(arr){
+      // Приводим к ожидаемым полям (id, title, description, dueDate, isComplete)
+      return (arr||[]).map(t=>({
+        id: t.id ?? t.taskId ?? t.uuid ?? Date.now(),
+        title: t.title ?? 'Без названия',
+        description: t.description ?? '',
+        dueDate: t.dueDate ?? null,
+        isComplete: (t.isComplete ?? t.complete ?? false)
+      }));
+    }
+
+    function computeAndPaint(){
+      if(!tasks) return;
+      const total = tasks.length;
+      const done = tasks.filter(t=>t.isComplete).length;
+      const overdue = tasks.filter(t=>isOverdue(t.dueDate, t.isComplete)).length;
+      const open = total - done;
+      metrics.total.textContent = total;
+      metrics.open.textContent = open;
+      metrics.done.textContent = done;
+      metrics.overdue.textContent = overdue;
+      counterLabel.textContent = `${total} шт. · открыто ${open}, выполнено ${done}, просрочено ${overdue}`;
+    }
+
+    // ===== КЛИЕНТСКИЙ РЕНДЕР =====
+    function paintClientList(items){
+      if(!clientList) return;
+      if(!items.length){
+        clientList.innerHTML = `<div class="empty">Пока пусто. Самое время создать первую задачу.</div>`;
+        return;
+      }
+      const html = [
+        `<div class="thead">
+          <div></div><div>Название</div><div>Описание</div><div>Срок</div><div>Статус</div><div style="text-align:right">Действия</div>
+        </div>`
+      ];
+      items.forEach(t=>{
+        const badgeClass = t.isComplete ? 'ok' : (isOverdue(t.dueDate, t.isComplete)? 'danger' : 'warn');
+        const badgeText = t.isComplete ? 'Выполнено' : (isOverdue(t.dueDate, t.isComplete) ? 'Просрочено' : 'Открыто');
+        html.push(`
+        <div class="row" data-id="${t.id}">
+          <div class="checkbox ${t.isComplete ? 'checked':''}" data-check="${t.id}"></div>
+          <div class="title-cell">${escapeHtml(t.title)}</div>
+          <div class="desc muted">${escapeHtml(t.description||'')}</div>
+          <div class="due"><span class="small">${fmtDate(t.dueDate)}</span></div>
+          <div class="status"><span class="badge ${badgeClass}">${badgeText}</span></div>
+          <div class="actions">
+            <a class="btn ghost small" href="/tasks/${t.id}" target="_blank">JSON</a>
+            ${!t.isComplete ? `<button class="btn small markDoneBtn" data-id="${t.id}">Отметить</button>`:''}
+            <button class="btn small dangerBtn" data-id="${t.id}">Удалить</button>
+          </div>
+        </div>`);
+      });
+      clientList.innerHTML = html.join('');
+      bindRowActions();
+    }
+
+    function escapeHtml(s=''){
+      return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    // ===== ПОИСК/ФИЛЬТРЫ =====
+    const searchInput = qs('#searchInput');
+    const statusSelect = qs('#statusSelect');
+    const dueBefore = qs('#dueBefore');
+    const clearFilters = qs('#clearFilters');
+
+    function applyFilters(){
+      const q = (searchInput?.value || '').toLowerCase().trim();
+      const status = statusSelect?.value || 'all';
+      const before = dueBefore?.value ? new Date(dueBefore.value) : null;
+
+      const rows = qsa('.row[data-id]');
+      let visible = 0;
+      rows.forEach(r=>{
+        const title = (r.querySelector('.title-cell')?.textContent || '').toLowerCase();
+        const desc = (r.querySelector('.desc')?.textContent || '').toLowerCase();
+        const done = r.querySelector('.checkbox')?.classList.contains('checked');
+        const dueText = r.querySelector('.due .small')?.textContent || '';
+        const due = dueText && dueText !== '—' ? new Date(dueText) : null;
+        const overdue = due ? (new Date(due.toDateString()) < new Date(new Date().toDateString())) : false;
+
+        let ok = true;
+        if(q && !(title.includes(q) || desc.includes(q))) ok = false;
+        if(status === 'open' && done) ok = false;
+        if(status === 'done' && !done) ok = false;
+        if(status === 'overdue' && !overdue) ok = false;
+        if(before && due && due > before) ok = false;
+
+        r.style.display = ok ? '' : 'none';
+        if(ok) visible++;
+      });
+
+      counterLabel.textContent = counterLabel.textContent.replace(/^.*$/, m=>`${visible} отображается · ${counterLabel.textContent.split('·').slice(1).join('·')||''}`);
+    }
+
+    searchInput?.addEventListener('input', applyFilters);
+    statusSelect?.addEventListener('change', applyFilters);
+    dueBefore?.addEventListener('change', applyFilters);
+    clearFilters?.addEventListener('click', ()=>{
+      if(searchInput) searchInput.value='';
+      if(statusSelect) statusSelect.value='all';
+      if(dueBefore) dueBefore.value='';
+      applyFilters();
+    });
+
+    // ===== ДЕЙСТВИЯ В СТРОКАХ =====
+    function bindRowActions(){
+      qsa('.markDoneBtn').forEach(b=>{
+        b.addEventListener('click', async ()=>{
+          const id = b.getAttribute('data-id');
+          // В демо нет PUT/PATCH — просто визуально отметим
+          const row = document.querySelector(`.row[data-id="${id}"]`);
+          const box = row?.querySelector('.checkbox');
+          box?.classList.add('checked');
+          row?.querySelector('.status .badge')?.classList.remove('warn','danger');
+          row?.querySelector('.status .badge')?.classList.add('ok');
+          row?.querySelector('.status .badge').textContent='Выполнено';
+          b.remove();
+        });
+      });
+      qsa('.dangerBtn').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const id = b.getAttribute('data-id');
+          const row = document.querySelector(`.row[data-id="${id}"]`);
+          row?.remove();
+          // Здесь можете вызвать ваш DELETE /tasks/{id} при наличии
+        });
+      });
+    }
+
+    // ===== МОДАЛКА =====
+    function toggleModal(open){ modal.style.display = open ? 'flex' : 'none'; }
+    openCreate?.addEventListener('click', ()=> toggleModal(true));
+    closeCreate?.addEventListener('click', ()=> toggleModal(false));
+    cancelCreate?.addEventListener('click', ()=> toggleModal(false));
+    modal?.addEventListener('click', (e)=>{ if(e.target === modal) toggleModal(false); });
+
+    // ===== СОЗДАНИЕ ЗАДАЧИ =====
+    createForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const payload = {
+        title: createForm.title.value?.trim(),
+        description: createForm.description.value?.trim(),
+        isComplete: createForm.isComplete.value === 'true',
+        dueDate: createForm.dueDate.value || null
+      };
+      if(!payload.title){ createForm.title.focus(); return; }
+
+      notice.classList.remove('hidden'); notice.textContent='Отправляем…';
+      try{
+        const res = await api('/tasks', {method:'POST', body: JSON.stringify(payload)});
+        if(res.ok){
+          notice.textContent='Создано. Обновляем…';
+          // На практике вы можете получить CreateTaskResponse и вставить строку без перезагрузки.
+          setTimeout(()=> location.reload(), 300);
+        }else{
+          notice.textContent='Ошибка при создании. Проверьте бэкенд/валидацию.';
+        }
+      }catch(err){
+        notice.textContent='Сеть недоступна или сервер не отвечает.';
+      }
+    });
+
+    // ===== ОБНОВЛЕНИЕ =====
+    qs('#refreshBtn')?.addEventListener('click', ()=> location.reload());
+
+    // ===== ЗАПУСК =====
+    fetchTasksIfNeeded().then(()=>{
+      bindRowActions();
+      applyFilters();
+    });
+</script>
+</body>
+</html>
