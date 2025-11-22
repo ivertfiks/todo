@@ -1,14 +1,15 @@
 package com.todolist.todo.DTO;
 
-import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Data
-public class GenericError {
+public record GenericError (
 
-    private final LocalDateTime localDateTime;
-    private final String path;
-    private final Map<String, String> errors;
+    LocalDateTime localDateTime,
+    String path,
+    Map<String, String> errors
 
-}
+) {}
+
+// GenericError[localDateTime="10/10/2025", path="..."]
+

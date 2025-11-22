@@ -29,4 +29,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorDto, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<GenericError> handleIllegalArguments(IllegalArgumentException ex,
+                                                                HttpServletRequest request) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("error", ex.getMessage());
+        var errorDto = new GenericError(LocalDateTime.now(), request.getRequestURI(), errors);
+        return new ResponseEntity<>(errorDto, HttpStatus.NOT_FOUND);
+    }
+
 }

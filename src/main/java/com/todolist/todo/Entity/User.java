@@ -11,7 +11,7 @@ import java.util.List;
 public class User {
 
     public User(String username, String email) {
-        this.username = username;
+        this.displayName = username;
         this.email = email;
     }
 
@@ -19,8 +19,12 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     int id;
 
-    @Column(unique = true)
-    String username;
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "credential_id", referencedColumnName = "id", unique = true)
+    private Credential credential;
+
+    @Column
+    String displayName;
 
     String email;
 

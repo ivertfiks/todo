@@ -35,7 +35,8 @@ public class TaskService {
     }
 
     public TaskResponse getTaskById(Integer id) {
-        Task tempTask = taskRepository.findTaskById(id);
+        Task tempTask = taskRepository.findTaskById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Task with given id not found: " + id));
         return taskMapper.toTaskResponse(tempTask);
     }
 

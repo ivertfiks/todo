@@ -37,7 +37,6 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<CreateTaskResponse> createTask(@RequestBody CreateTaskRequest taskRequest) {
-        // todo test controller with and without existing user
         System.out.println(taskRequest.getTitle() + " " + taskRequest.getDescription());
         return new ResponseEntity<>(taskService.createTask(taskRequest), HttpStatus.CREATED);
     }
