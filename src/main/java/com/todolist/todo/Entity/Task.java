@@ -38,15 +38,15 @@ public class Task {
     LocalDateTime updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user.id")
-    User user;
+    @JoinColumn(name = "taskspace.id")
+    TaskSpace taskSpace;
 
-    public Task(String title, String description, Boolean isComplete, LocalDate dueDate, User user) {
+    public Task(String title, String description, Boolean isComplete, LocalDate dueDate, TaskSpace taskSpace) {
         this.title = title;
         this.description = description;
         this.isComplete = isComplete;
         this.dueDate = dueDate;
-        this.user = user;
+        this.taskSpace = taskSpace;
     }
 
 
